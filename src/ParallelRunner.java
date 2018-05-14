@@ -1,3 +1,4 @@
+import java.math.BigInteger;
 import java.nio.charset.StandardCharsets;
 import java.security.MessageDigest;
 import java.security.SecureRandom;
@@ -6,6 +7,9 @@ public class ParallelRunner implements Runnable {
 
 	private Thread t;
 	private String threadName;
+	
+	private static int amt = 11;
+	private static int num_tries = 1000;
 
 	ParallelRunner(String name) {
 		threadName = name;
@@ -15,23 +19,30 @@ public class ParallelRunner implements Runnable {
 	public void run() {
 		//System.out.println("Running " + threadName);
 		SecureRandom random = new SecureRandom();
+		int result = random.nextInt(1000000);
+		String resultStr;
 		try {
-			for (int i = 0; i < 100; i++) {
+			for (int i = 0; i < num_tries; i++) {
 				//System.out.println("Thread: " + threadName + ", " + i);
-				int result = random.nextInt(1000000);
-				String resultStr = result + "";
-				if (resultStr.length() != 6) {
-					for (int x = resultStr.length(); x < 6; x++) {
-						resultStr = "0" + resultStr;
-					}
-				}
 				try {
+					result += 1;
+					resultStr = result + "";
 					MessageDigest digest = MessageDigest.getInstance("SHA-256");
-					byte[] hash = digest.digest(resultStr.getBytes(StandardCharsets.UTF_8));
-					for (int j = 0; j < hash.length; j++) {
-						System.out.print(hash[j]);
+					byte[] bytehash = digest.digest(resultStr.getBytes(StandardCharsets.UTF_8));
+					String hash = bytesToHex(bytehash);
+					String bithash = new BigInteger(hash, 16).toString(2);
+					boolean check = true;
+					for (int j = bithash.length() - 1; j > bithash.length() - 1 - amt; j--) {
+						if (bithash.charAt(j) != '0') {
+							check = false;
+							break;
+						}
 					}
-					System.out.println();
+					if (check) {
+						System.out.print("Got a Hash with " + amt + " zero bytes: ");
+						System.out.print(hash);
+						System.out.println();
+					}
 				} catch (Exception e) {
 		
 				}
@@ -42,6 +53,15 @@ public class ParallelRunner implements Runnable {
 			//System.out.println("Thread " + threadName + " interrupted.");
 		}
 		//System.out.println("Thread " + threadName + " exiting.");
+	}
+	private static String bytesToHex(byte[] hash) {
+	    StringBuffer hexString = new StringBuffer();
+	    for (int i = 0; i < hash.length; i++) {
+	    String hex = Integer.toHexString(0xff & hash[i]);
+	    if(hex.length() == 1) hexString.append('0');
+	        hexString.append(hex);
+	    }
+	    return hexString.toString();
 	}
 
 	public void start() {
